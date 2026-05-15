@@ -1,0 +1,1110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#FAF7F2">
+<title>Our Budget</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<style>
+:root {
+  --bg: #FAF7F2; --card: #FFFFFF; --text: #2A2A2E; --text2: #1A1A1E;
+  --dim: #6B6B75; --dim2: #9A9AA5; --accent: #D67555; --green: #4A9B7E;
+  --warn: #C8821C; --danger: #D63838; --border: rgba(0,0,0,0.06);
+  --border2: rgba(0,0,0,0.1); --glass: rgba(0,0,0,0.03);
+}
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+body { background:var(--bg); color:var(--text); font-family:'DM Sans','Helvetica Neue',sans-serif; max-width:480px; margin:0 auto; min-height:100vh; min-height:100dvh; overflow-x:hidden; }
+input[type="number"] { -moz-appearance:textfield; }
+input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance:none; margin:0; }
+
+.screen { display:none; padding-bottom:90px; }
+.screen.active { display:block; }
+
+/* Header */
+.hdr { padding:20px 20px 0; display:flex; align-items:center; justify-content:space-between; }
+.ttl { font-size:22px; font-weight:700; letter-spacing:-0.5px; color:var(--text2); }
+.sub { font-size:11px; color:var(--dim2); letter-spacing:1px; text-transform:uppercase; font-weight:500; }
+.lbl { font-size:11px; color:var(--dim); letter-spacing:1px; text-transform:uppercase; display:block; margin-bottom:8px; font-weight:500; }
+
+/* Cards */
+.card { background:var(--card); border-radius:14px; padding:16px; margin:6px 20px; box-shadow:0 1px 2px rgba(0,0,0,0.04); }
+.card-hero { background:linear-gradient(135deg,#FFF8F1 0%,var(--card) 100%); box-shadow:0 2px 8px rgba(214,117,85,0.08); }
+
+/* Buttons */
+.btn { background:var(--accent); color:var(--bg); border:none; border-radius:12px; padding:14px 24px; font-size:15px; font-weight:600; cursor:pointer; width:100%; font-family:inherit; transition:opacity 0.2s; }
+.btn:disabled { opacity:0.4; }
+.btn2 { background:var(--glass); color:var(--text); border:1px solid var(--border2); border-radius:12px; padding:14px 24px; font-size:15px; font-weight:500; cursor:pointer; width:100%; font-family:inherit; }
+.btn-sm { padding:6px 14px; font-size:12px; font-weight:600; width:auto; border-radius:8px; }
+.btn-edit { background:rgba(232,146,124,0.12); border:1px solid rgba(232,146,124,0.3); color:var(--accent); }
+
+/* Inputs */
+.inp { background:var(--glass); border:1px solid var(--border2); border-radius:12px; padding:14px 16px; color:var(--text); font-size:16px; width:100%; font-family:inherit; outline:none; }
+.inp:focus { border-color:rgba(232,146,124,0.4); }
+.inp-lg { font-size:28px; font-weight:700; text-align:center; padding:16px; letter-spacing:-0.5px; }
+.inp-sm { width:80px; text-align:right; padding:7px 10px; font-size:14px; border-radius:8px; }
+
+/* Chips */
+.chips { display:flex; gap:6px; padding:10px 20px; overflow-x:auto; -webkit-overflow-scrolling:touch; }
+.chips::-webkit-scrollbar { display:none; }
+.chip { background:rgba(0,0,0,0.04); color:var(--dim); border:1px solid var(--border); border-radius:20px; padding:6px 14px; font-size:12px; font-weight:600; cursor:pointer; font-family:inherit; white-space:nowrap; flex-shrink:0; }
+.chip.on { background:rgba(232,146,124,0.15); color:var(--accent); border-color:rgba(232,146,124,0.3); }
+
+/* Progress */
+.pbar { height:5px; border-radius:3px; background:var(--border); overflow:hidden; margin-top:6px; }
+.pbar-fill { height:100%; border-radius:3px; transition:width 0.5s ease; }
+
+/* Nav */
+.nav { position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:480px; background:var(--card); border-top:1px solid var(--border); display:flex; justify-content:space-around; padding:10px 0 28px; z-index:100; }
+.nav-btn { display:flex; flex-direction:column; align-items:center; gap:3px; background:none; border:none; color:var(--dim2); font-size:10px; font-weight:600; cursor:pointer; font-family:inherit; padding:4px 12px; }
+.nav-btn.on { color:var(--accent); }
+.nav-btn span { font-size:20px; }
+
+/* Alert banner */
+.alert-banner { margin:8px 20px; background:rgba(212,165,116,0.1); border:1px solid rgba(212,165,116,0.25); border-radius:12px; padding:12px 14px; }
+.alert-title { font-size:12px; font-weight:700; color:var(--warn); margin-bottom:4px; }
+.alert-row { font-size:12px; color:var(--warn); padding:2px 0; line-height:1.4; }
+.alert-row.over { color:var(--danger); }
+
+/* Budget group */
+.bgroup-hdr { width:100%; background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:10px; padding:10px 14px; cursor:pointer; display:flex; justify-content:space-between; align-items:center; font-family:inherit; color:var(--text); margin-bottom:3px; }
+.bgroup-hdr .g-name { font-size:13px; font-weight:700; }
+.bgroup-hdr .g-total { font-size:12px; }
+.brow { display:flex; align-items:center; justify-content:space-between; padding:7px 14px; background:var(--card); border-radius:10px; margin-bottom:2px; }
+.brow-icon { font-size:14px; margin-right:7px; }
+.brow-label { font-size:12px; font-weight:600; color:var(--text); }
+
+/* Category picker */
+.cat-grid { display:grid; grid-template-columns:1fr 1fr; gap:4px; }
+.cat-btn { background:rgba(255,255,255,0.03); border:1.5px solid var(--border); border-radius:8px; padding:7px 6px; cursor:pointer; display:flex; align-items:center; gap:5px; color:var(--dim); font-family:inherit; font-size:11px; font-weight:600; transition:all 0.15s; }
+.cat-btn.on { color:var(--text2); }
+
+/* Charge toggle */
+.charge-row { display:flex; gap:8px; }
+.charge-btn { flex:1; background:rgba(255,255,255,0.03); border:1.5px solid var(--border); border-radius:10px; padding:12px 8px; cursor:pointer; color:var(--dim); font-family:inherit; font-size:13px; font-weight:600; display:flex; align-items:center; justify-content:center; gap:6px; }
+.charge-btn.on { background:rgba(232,146,124,0.12); border-color:rgba(232,146,124,0.4); color:var(--text2); }
+
+/* Inline warning */
+.inline-warn { margin-top:10px; padding:8px 10px; border-radius:8px; font-size:12px; font-weight:600; }
+.inline-warn.yellow { background:rgba(212,165,116,0.1); border:1px solid rgba(212,165,116,0.2); color:var(--warn); }
+.inline-warn.red { background:rgba(232,93,93,0.1); border:1px solid rgba(232,93,93,0.2); color:var(--danger); }
+
+/* History row */
+.hist-row { display:flex; align-items:center; justify-content:space-between; padding:11px 14px; }
+.hist-info { display:flex; align-items:center; gap:9px; flex:1; min-width:0; }
+.hist-name { font-size:12px; font-weight:600; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.hist-meta { font-size:10px; color:var(--dim2); margin-top:1px; }
+.hist-amt { font-size:13px; font-weight:700; color:var(--accent); white-space:nowrap; }
+.del-btn { background:none; border:none; color:var(--dim2); font-size:16px; cursor:pointer; padding:4px; margin-left:8px; }
+
+/* Setup */
+.setup-wrap { padding:50px 28px; text-align:center; }
+.setup-icon { font-size:48px; margin-bottom:12px; }
+.setup-title { font-family:'DM Serif Display',serif; font-size:26px; font-weight:400; margin-bottom:6px; color:var(--text2); }
+.setup-desc { color:var(--dim); font-size:13px; margin-bottom:32px; line-height:1.6; }
+.setup-field { margin-bottom:14px; text-align:left; }
+
+/* Animations */
+@keyframes fadeUp { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+.card { animation: fadeUp 0.3s ease both; }
+
+/* Summary card (Essentials vs Discretionary) */
+.summary-card { display:flex; gap:8px; margin:6px 20px; }
+.summary-cell { flex:1; background:var(--card); border-radius:14px; padding:12px 14px; }
+.summary-cell .s-lbl { font-size:10px; color:var(--dim2); letter-spacing:1px; text-transform:uppercase; font-weight:600; margin-bottom:6px; }
+.summary-cell .s-amt { font-size:15px; font-weight:700; color:var(--text2); letter-spacing:-0.3px; }
+.summary-cell .s-of { font-size:11px; color:var(--dim2); margin-top:2px; }
+.summary-cell .s-pct { font-size:11px; font-weight:700; margin-top:4px; }
+
+/* Chart card */
+.chart-card { background:var(--card); border-radius:14px; padding:14px; margin:6px 20px; }
+.chart-card .c-title { font-size:11px; color:var(--dim); letter-spacing:1px; text-transform:uppercase; font-weight:600; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; }
+.chart-card .c-legend { display:flex; gap:10px; font-size:10px; color:var(--dim2); margin-top:6px; flex-wrap:wrap; }
+.chart-card .c-legend span { display:flex; align-items:center; gap:4px; }
+.chart-card .c-legend i { width:10px; height:2px; display:inline-block; }
+
+/* Drill-down banner */
+.drill-banner { margin:6px 20px; background:rgba(232,146,124,0.1); border:1px solid rgba(232,146,124,0.25); border-radius:10px; padding:8px 12px; display:flex; justify-content:space-between; align-items:center; font-size:12px; color:var(--accent); font-weight:600; }
+.drill-banner button { background:none; border:none; color:var(--accent); font-size:13px; cursor:pointer; font-family:inherit; padding:2px 6px; }
+
+/* Classification pill */
+.cls-pill { background:rgba(0,0,0,0.04); border:1px solid var(--border2); border-radius:6px; padding:3px 8px; font-size:10px; font-weight:700; cursor:pointer; font-family:inherit; color:var(--dim); margin-right:6px; letter-spacing:0.5px; }
+.cls-pill.essential { background:rgba(124,181,160,0.15); border-color:rgba(124,181,160,0.3); color:var(--green); }
+.cls-pill.discretionary { background:rgba(212,165,116,0.15); border-color:rgba(212,165,116,0.3); color:var(--warn); }
+
+/* Monthly indicator */
+.monthly-tag { display:inline-flex; align-items:center; gap:4px; background:rgba(124,181,160,0.12); border:1px solid rgba(124,181,160,0.25); color:var(--green); font-size:10px; font-weight:700; padding:3px 8px; border-radius:6px; letter-spacing:0.5px; }
+
+/* Clickable category row */
+.cat-row { cursor:pointer; transition:background 0.15s; }
+.cat-row:active { background:rgba(0,0,0,0.04); }
+
+/* Config screen */
+.config-step { background:var(--card); border-radius:12px; padding:16px; margin:12px 0; text-align:left; }
+.config-step h3 { font-size:14px; font-weight:700; color:var(--text2); margin-bottom:8px; }
+.config-step p { font-size:12px; color:var(--dim); line-height:1.5; margin-bottom:10px; }
+.config-step code { background:rgba(255,255,255,0.08); padding:2px 6px; border-radius:4px; font-size:11px; color:var(--accent); }
+textarea.inp { min-height:100px; resize:vertical; font-size:13px; font-family:'DM Sans',monospace; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════ FIREBASE CONFIG SCREEN ═══════════ -->
+<div id="configScreen" class="screen active">
+<div class="setup-wrap">
+  <div class="setup-icon">🔥</div>
+  <h1 class="setup-title">Connect Database</h1>
+  <p class="setup-desc">One-time setup so your budget<br>syncs between phones for free.</p>
+
+  <div class="config-step">
+    <h3>Step 1 — Create Firebase Project</h3>
+    <p>On a computer, go to <strong>console.firebase.google.com</strong><br>
+    → Click <strong>Add Project</strong> → Name it (e.g. "our-budget") → Click through to create.</p>
+  </div>
+
+  <div class="config-step">
+    <h3>Step 2 — Enable Realtime Database</h3>
+    <p>In your project → <strong>Build → Realtime Database → Create Database</strong><br>
+    → Pick any location → Start in <strong>Test mode</strong> → Click Enable.</p>
+  </div>
+
+  <div class="config-step">
+    <h3>Step 3 — Enable Anonymous Auth</h3>
+    <p>Go to <strong>Build → Authentication → Sign-in method</strong><br>
+    → Enable <strong>Anonymous</strong> → Save.</p>
+  </div>
+
+  <div class="config-step">
+    <h3>Step 4 — Get your config</h3>
+    <p>Go to <strong>Project Settings</strong> (gear icon) → Scroll to <strong>Your apps</strong><br>
+    → Click the <code>&lt;/&gt;</code> Web icon → Register app → Copy the <code>firebaseConfig</code> object.</p>
+  </div>
+
+  <div class="setup-field">
+    <label class="lbl">Paste your Firebase config here</label>
+    <textarea id="configInput" class="inp" placeholder='{"apiKey":"...","authDomain":"...","databaseURL":"...","projectId":"...","storageBucket":"...","messagingSenderId":"...","appId":"..."}'></textarea>
+  </div>
+  <p style="font-size:11px;color:var(--dim2);margin-bottom:16px;text-align:left">Paste the whole object including the curly braces. Remove <code>const firebaseConfig = </code> and the trailing semicolon if present.</p>
+  <button class="btn" id="connectBtn" onclick="connectFirebase()">Connect & Continue →</button>
+  <p id="configError" style="color:var(--danger);font-size:12px;margin-top:10px;display:none"></p>
+</div>
+</div>
+
+<!-- ═══════════ SETUP SCREEN ═══════════ -->
+<div id="setupScreen" class="screen">
+<div class="setup-wrap">
+  <div class="setup-icon">💑</div>
+  <h1 class="setup-title">Our Budget</h1>
+  <p class="setup-desc">Personal + shared budgets.<br>Custom billing cycle. Smart alerts.</p>
+  <div id="setupStep0">
+    <div class="setup-field"><label class="lbl">Partner 1 Name</label><input class="inp" id="name1" placeholder="e.g. Alex"></div>
+    <div class="setup-field"><label class="lbl">Partner 2 Name</label><input class="inp" id="name2" placeholder="e.g. Mandy"></div>
+    <div class="setup-field">
+      <label class="lbl">Billing cycle starts on day</label>
+      <div style="display:flex;align-items:center;gap:10px">
+        <input class="inp" id="cycleDay" type="number" inputmode="numeric" min="1" max="28" value="1" style="width:80px;text-align:center">
+        <span style="color:var(--dim2);font-size:13px">of each month (1–28)</span>
+      </div>
+    </div>
+    <button class="btn" onclick="setupStep1()">Continue →</button>
+  </div>
+  <div id="setupStep1" style="display:none">
+    <p style="color:var(--dim);font-size:13px;margin-bottom:20px;text-align:left">Who are you on this device?</p>
+    <button class="btn2" style="margin-bottom:12px" id="pickP1"></button>
+    <button class="btn2" id="pickP2"></button>
+  </div>
+</div>
+</div>
+
+<!-- ═══════════ USER PICKER ═══════════ -->
+<div id="pickerScreen" class="screen">
+<div class="setup-wrap">
+  <div class="setup-icon">👋</div>
+  <h2 class="setup-title">Who's this?</h2>
+  <button class="btn2" style="margin-bottom:12px" id="pickU1"></button>
+  <button class="btn2" id="pickU2"></button>
+</div>
+</div>
+
+<!-- ═══════════ ONBOARDING: SET BUDGETS ═══════════ -->
+<div id="onboardScreen" class="screen">
+<div style="padding:24px 20px 0">
+  <div class="sub">Step 1 of 1</div>
+  <div class="ttl">Set Your Monthly Budgets</div>
+  <p style="font-size:13px;color:var(--dim);margin-top:6px;line-height:1.5">Fill in amounts for each category. Leave $0 for ones you don't use — they'll stay hidden. These persist until you change them.</p>
+</div>
+<div class="chips" id="onboardChips"></div>
+<div style="padding:0 20px 8px;display:flex;justify-content:space-between;align-items:center">
+  <span id="onboardTabTotal" style="font-size:14px;font-weight:700;color:var(--accent)"></span>
+  <span id="onboardAllTotal" style="font-size:12px;color:var(--dim2)"></span>
+</div>
+<div id="onboardGroups" style="padding:0 20px"></div>
+<div style="padding:16px 20px 100px">
+  <button class="btn" onclick="finishOnboard()">Save Budgets & Start Tracking →</button>
+  <button class="btn2" style="margin-top:10px;font-size:13px;color:var(--dim)" onclick="finishOnboard()">Skip for now</button>
+</div>
+</div>
+
+<!-- ═══════════ DASHBOARD ═══════════ -->
+<div id="dashScreen" class="screen">
+<div class="hdr">
+  <div>
+    <div class="sub" id="dashCycle"></div>
+    <div class="ttl" id="dashGreeting"></div>
+  </div>
+  <div style="display:flex;gap:6px;align-items:center">
+    <div id="dashDaysLeft" style="background:var(--glass);border-radius:8px;padding:6px 10px;font-size:11px;color:var(--dim);font-weight:600"></div>
+    <button class="btn-sm" style="background:var(--glass);border:1px solid var(--border2);color:var(--dim);cursor:pointer;font-family:inherit" onclick="switchUser()">Switch</button>
+  </div>
+</div>
+<div id="dashAlerts"></div>
+<div class="chips" id="dashChips"></div>
+<div id="dashHero" class="card card-hero"></div>
+<div id="dashSummary"></div>
+<div id="dashDrill"></div>
+<div id="dashChartCum"></div>
+<div id="dashChartDaily"></div>
+<div style="padding:8px 20px 2px"><div class="sub" id="dashCatsLabel">Categories</div></div>
+<div id="dashCats"></div>
+</div>
+
+<!-- ═══════════ ADD EXPENSE ═══════════ -->
+<div id="addScreen" class="screen">
+<div style="padding:20px 20px 0">
+  <div class="ttl">Add Expense</div>
+  <div id="addUser" style="font-size:13px;color:var(--dim);margin-top:4px"></div>
+</div>
+<div class="card">
+  <label class="lbl">Charge to</label>
+  <div class="charge-row" id="addChargeRow"></div>
+</div>
+<div class="card">
+  <label class="lbl">Amount</label>
+  <input class="inp inp-lg" id="addAmount" type="number" inputmode="decimal" placeholder="$0">
+  <div id="addWarn"></div>
+</div>
+<div class="card">
+  <label class="lbl">Category</label>
+  <input class="inp" id="addCatSearch" placeholder="🔍 Search categories..." style="margin-bottom:10px;font-size:13px;padding:10px 14px">
+  <div id="addCatList" style="max-height:260px;overflow-y:auto"></div>
+</div>
+<div class="card">
+  <label class="lbl">Note (optional)</label>
+  <input class="inp" id="addNote" placeholder="What was it for?">
+</div>
+<div style="padding:8px 20px">
+  <button class="btn" id="addSubmit" onclick="addExpense()">Add Expense</button>
+</div>
+</div>
+
+<!-- ═══════════ HISTORY ═══════════ -->
+<div id="histScreen" class="screen">
+<div style="padding:20px 20px 0"><div class="ttl">History</div></div>
+<div class="chips" id="histChips"></div>
+<div id="histList"></div>
+</div>
+
+<!-- ═══════════ BUDGETS ═══════════ -->
+<div id="budgetScreen" class="screen">
+<div style="padding:20px 20px 0;display:flex;justify-content:space-between;align-items:center">
+  <div class="ttl">Budgets</div>
+  <div id="budgetActions"></div>
+</div>
+<div style="padding:4px 20px 8px"><span class="monthly-tag">✓ Monthly</span> <span style="font-size:11px;color:var(--dim2);margin-left:4px">Persists every cycle until changed</span></div>
+<div class="chips" id="budgetChips"></div>
+<div style="padding:0 20px 4px"><span id="budgetTabTotal" style="font-size:14px;font-weight:700;color:var(--accent)"></span></div>
+<div id="budgetGroups" style="padding:0 20px"></div>
+<div style="padding:16px 20px 0"><div class="sub">Settings</div></div>
+<div class="card" style="display:flex;align-items:center;justify-content:space-between">
+  <div><div style="font-size:13px;font-weight:600">Billing cycle start</div><div id="cycleLabel" style="font-size:11px;color:var(--dim2)"></div></div>
+  <input class="inp inp-sm" id="cycleInput" type="number" inputmode="numeric" min="1" max="28" style="width:60px;text-align:center">
+</div>
+<div style="padding:20px">
+  <button class="btn2" style="font-size:13px;color:var(--danger);border-color:rgba(232,93,93,0.2)" onclick="resetAll()">Reset Everything</button>
+</div>
+</div>
+
+<!-- ═══════════ NAV BAR ═══════════ -->
+<div class="nav" id="mainNav" style="display:none">
+  <button class="nav-btn on" onclick="showScreen('dash')"><span>📊</span>Overview</button>
+  <button class="nav-btn" onclick="showScreen('add')"><span>➕</span>Add</button>
+  <button class="nav-btn" onclick="showScreen('hist')"><span>📋</span>History</button>
+  <button class="nav-btn" onclick="showScreen('budget')"><span>⚙️</span>Budgets</button>
+</div>
+
+<script>
+// ═══════════ CATEGORIES ═══════════
+const GROUPS = [
+  { group:"Home", cats:[
+    {id:"mortgage",label:"Mortgage / Rent",icon:"🏠",color:"#E8927C"},
+    {id:"property_tax",label:"Property Tax",icon:"🏛️",color:"#D4856E"},
+    {id:"home_insurance",label:"Home Insurance",icon:"🛡️",color:"#C4796A"},
+    {id:"maintenance",label:"Home Maintenance",icon:"🔧",color:"#D49A7C"},
+    {id:"hoa",label:"HOA / Body Corp",icon:"🏘️",color:"#B8806E"},
+  ]},
+  { group:"Utilities", cats:[
+    {id:"electricity",label:"Electricity",icon:"⚡",color:"#C49BB5"},
+    {id:"gas_heating",label:"Gas / Heating",icon:"🔥",color:"#B88DA8"},
+    {id:"water",label:"Water",icon:"💧",color:"#8BA4C4"},
+    {id:"internet",label:"Internet",icon:"📡",color:"#9BB5D4"},
+    {id:"phone",label:"Phone Plans",icon:"📱",color:"#A89BD4"},
+    {id:"trash",label:"Trash / Recycling",icon:"♻️",color:"#8A9EB8"},
+  ]},
+  { group:"Transport", cats:[
+    {id:"car_payment",label:"Car Payment",icon:"🚗",color:"#8BA4C4"},
+    {id:"car_insurance",label:"Car Insurance",icon:"🛡️",color:"#7B94B4"},
+    {id:"fuel",label:"Fuel / Charging",icon:"⛽",color:"#6B84A4"},
+    {id:"parking",label:"Parking / Tolls",icon:"🅿️",color:"#7E98B8"},
+    {id:"public_transport",label:"Public Transport",icon:"🚌",color:"#8EAAC8"},
+    {id:"car_maint",label:"Car Maintenance",icon:"🔧",color:"#5B7494"},
+    {id:"rideshare",label:"Rideshare / Taxi",icon:"🚕",color:"#9EBAD4"},
+  ]},
+  { group:"Food & Drink", cats:[
+    {id:"groceries",label:"Groceries",icon:"🛒",color:"#7CB5A0"},
+    {id:"dining",label:"Dining Out",icon:"🍽️",color:"#D4A574"},
+    {id:"coffee",label:"Coffee & Café",icon:"☕",color:"#C49564"},
+    {id:"takeaway",label:"Takeaway / Delivery",icon:"🥡",color:"#B48554"},
+    {id:"alcohol",label:"Alcohol",icon:"🍷",color:"#A47544"},
+  ]},
+  { group:"Health & Wellness", cats:[
+    {id:"health_ins",label:"Health Insurance",icon:"🏥",color:"#E89B9B"},
+    {id:"medical",label:"Doctor / Medical",icon:"💊",color:"#D88B8B"},
+    {id:"dental",label:"Dental",icon:"🦷",color:"#C87B7B"},
+    {id:"vision",label:"Vision / Optical",icon:"👓",color:"#B86B6B"},
+    {id:"pharmacy",label:"Pharmacy",icon:"💉",color:"#E8ABAB"},
+    {id:"gym",label:"Gym / Fitness",icon:"🏋️",color:"#A85B5B"},
+    {id:"wellness",label:"Wellness / Therapy",icon:"🧘",color:"#F0BBBB"},
+  ]},
+  { group:"Insurance & Finance", cats:[
+    {id:"life_ins",label:"Life Insurance",icon:"🛡️",color:"#D4B896"},
+    {id:"loan",label:"Loan Repayment",icon:"🏦",color:"#C4A886"},
+    {id:"cc_fees",label:"Credit Card Fees",icon:"💳",color:"#B49876"},
+    {id:"accounting",label:"Accounting / Tax",icon:"📊",color:"#A48866"},
+  ]},
+  { group:"Children & Pets", cats:[
+    {id:"childcare",label:"Childcare / School",icon:"👶",color:"#B8C97E"},
+    {id:"kids_act",label:"Kids Activities",icon:"⚽",color:"#A8B96E"},
+    {id:"school_sup",label:"School Supplies",icon:"📚",color:"#98A95E"},
+    {id:"pet",label:"Pet Care",icon:"🐾",color:"#C8D98E"},
+  ]},
+  { group:"Lifestyle", cats:[
+    {id:"clothing",label:"Clothing",icon:"👗",color:"#9BB5D4"},
+    {id:"personal",label:"Personal Care",icon:"💇",color:"#AB9BC4"},
+    {id:"subs",label:"Subscriptions",icon:"📺",color:"#A89BD4"},
+    {id:"entertainment",label:"Entertainment",icon:"🎬",color:"#B8C97E"},
+    {id:"hobbies",label:"Hobbies",icon:"🎨",color:"#C8A97E"},
+    {id:"gifts",label:"Gifts & Donations",icon:"🎁",color:"#D4A0A0"},
+    {id:"holidays",label:"Holidays / Travel",icon:"✈️",color:"#8BC4B0"},
+  ]},
+  { group:"Savings & Investment", cats:[
+    {id:"emergency",label:"Emergency Fund",icon:"🆘",color:"#D4B896"},
+    {id:"retirement",label:"Retirement / Super",icon:"🏖️",color:"#C4A886"},
+    {id:"invest",label:"Investments",icon:"📈",color:"#B49876"},
+    {id:"savings",label:"General Savings",icon:"🐷",color:"#A48866"},
+  ]},
+  { group:"Other", cats:[{id:"other",label:"Miscellaneous",icon:"📦",color:"#A8A8B8"}] },
+];
+const ALL = GROUPS.flatMap(g => g.cats);
+const CATMAP = {}; ALL.forEach(c => CATMAP[c.id] = c);
+const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+// Default essential/discretionary classification ('e' = essential, 'd' = discretionary)
+const DEFAULT_CLASS = {
+  // Home — essential
+  mortgage:'e', property_tax:'e', home_insurance:'e', maintenance:'e', hoa:'e',
+  // Utilities — essential
+  electricity:'e', gas_heating:'e', water:'e', internet:'e', phone:'e', trash:'e',
+  // Transport — mostly essential, rideshare discretionary
+  car_payment:'e', car_insurance:'e', fuel:'e', parking:'e', public_transport:'e', car_maint:'e', rideshare:'d',
+  // Food — groceries essential, eating out discretionary
+  groceries:'e', dining:'d', coffee:'d', takeaway:'d', alcohol:'d',
+  // Health — insurance + medical essential, gym/wellness discretionary
+  health_ins:'e', medical:'e', dental:'e', vision:'e', pharmacy:'e', gym:'d', wellness:'d',
+  // Insurance & finance — essential
+  life_ins:'e', loan:'e', cc_fees:'e', accounting:'e',
+  // Children — childcare/school essential, activities discretionary
+  childcare:'e', kids_act:'d', school_sup:'e', pet:'d',
+  // Lifestyle — discretionary
+  clothing:'d', personal:'d', subs:'d', entertainment:'d', hobbies:'d', gifts:'d', holidays:'d',
+  // Savings — essential
+  emergency:'e', retirement:'e', invest:'e', savings:'e',
+  // Other — discretionary
+  other:'d',
+};
+
+// ═══════════ STATE ═══════════
+let db = null, currentUser = null, config = null, budgets = null, expenses = [], listeners = [];
+let classifications = {}, editClassifications = null, dashDrillCat = null;
+let currentView = 'dash', dashTab = 'shared', histFilter = 'all', budgetTab = 'shared', onboardTab = 'shared';
+let editMode = false, editBudgets = null;
+let addState = { category: 'groceries', budgetType: 'shared' };
+
+// ═══════════ HELPERS ═══════════
+const fmt = n => new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',minimumFractionDigits:0,maximumFractionDigits:0}).format(n);
+function getCK() {
+  const t=new Date(), d=config?.cycleStart||1; let y=t.getFullYear(),m=t.getMonth();
+  if(t.getDate()<d){m--;if(m<0){m=11;y--;}} return `${y}-${String(m+1).padStart(2,'0')}`;
+}
+function getCycleDates() {
+  const t=new Date(),d=config?.cycleStart||1; let y=t.getFullYear(),m=t.getMonth();
+  if(t.getDate()<d){m--;if(m<0){m=11;y--;}}
+  const s=new Date(y,m,d); let em=m+1,ey=y;if(em>11){em=0;ey++;}
+  return {start:s,end:new Date(ey,em,d-1)};
+}
+function daysLeft(){const{end}=getCycleDates();const t=new Date();t.setHours(0,0,0,0);return Math.max(0,Math.ceil((end-t)/864e5));}
+function fmtD(d){return `${MONTHS[d.getMonth()]} ${d.getDate()}`;}
+function getTotal(bt,cid){return expenses.filter(e=>e.budgetType===bt&&(!cid||e.category===cid)).reduce((s,e)=>s+e.amount,0);}
+function getBgt(bt,cid){return budgets?.[bt]?.[cid]||0;}
+function getTotalBgt(bt){return ALL.reduce((s,c)=>s+getBgt(bt,c.id),0);}
+function btLabel(bt){return bt==='shared'?'Shared':bt==='person1'?config?.person1:config?.person2;}
+
+// Privacy: which budget types should this user see?
+function getVisibleTypes() {
+  if (!currentUser || !config) return ['shared'];
+  const myType = currentUser === config.person1 ? 'person1' : 'person2';
+  return ['shared', myType];
+}
+function getMyType() {
+  return currentUser === config?.person1 ? 'person1' : 'person2';
+}
+
+// Classification (essential vs discretionary)
+function classOf(cid) {
+  return classifications?.[cid] || DEFAULT_CLASS[cid] || 'd';
+}
+function classOfEdit(cid) {
+  if (editClassifications && editClassifications[cid]) return editClassifications[cid];
+  return DEFAULT_CLASS[cid] || 'd';
+}
+
+// Cycle math for charts
+function getCycleDays() {
+  const {start, end} = getCycleDates();
+  return Math.round((end - start) / 86400000) + 1;
+}
+function dayOfCycle(date) {
+  const {start} = getCycleDates();
+  const s = new Date(start); s.setHours(0,0,0,0);
+  const d = new Date(date); d.setHours(0,0,0,0);
+  return Math.floor((d - s) / 86400000) + 1;
+}
+
+// Build per-day & cumulative arrays for a tab + optional category
+function buildSeries(tab, catId) {
+  const days = getCycleDays();
+  const byDay = new Array(days + 1).fill(0); // 1-indexed
+  expenses.filter(e => e.budgetType === tab && (!catId || e.category === catId)).forEach(e => {
+    const d = dayOfCycle(new Date(e.date));
+    if (d >= 1 && d <= days) byDay[d] += e.amount;
+  });
+  const cum = new Array(days + 1).fill(0);
+  for (let i = 1; i <= days; i++) cum[i] = cum[i-1] + byDay[i];
+  return { byDay, cum, days };
+}
+
+// Cumulative spend vs pace line chart
+function chartCumulative(tab, catId) {
+  const { cum, days } = buildSeries(tab, catId);
+  const budget = catId ? getBgt(tab, catId) : getTotalBgt(tab);
+  const today = Math.max(1, Math.min(dayOfCycle(new Date()), days));
+  const maxY = Math.max(budget, cum[days], cum[today], 1) * 1.1;
+  const W = 440, H = 170, PL = 42, PR = 14, PT = 16, PB = 26;
+  const cw = W - PL - PR, ch = H - PT - PB;
+  const xAt = d => PL + (days > 1 ? (d - 1) / (days - 1) * cw : cw / 2);
+  const yAt = v => PT + ch - (v / maxY) * ch;
+
+  // Pace line (ideal): from (1, 0) to (days, budget)
+  const paceX1 = xAt(1), paceY1 = yAt(0);
+  const paceX2 = xAt(days), paceY2 = yAt(budget);
+
+  // Actual cumulative path up to today
+  let path = '';
+  for (let i = 1; i <= today; i++) {
+    path += (i === 1 ? 'M' : 'L') + xAt(i).toFixed(1) + ',' + yAt(cum[i]).toFixed(1) + ' ';
+  }
+  // Area under actual line
+  let area = path + 'L' + xAt(today).toFixed(1) + ',' + yAt(0).toFixed(1) + ' L' + xAt(1).toFixed(1) + ',' + yAt(0).toFixed(1) + ' Z';
+
+  const tx = xAt(today);
+  const overPace = cum[today] > (budget * today / days);
+  const lineCol = overPace ? 'var(--danger)' : 'var(--accent)';
+  const areaCol = overPace ? 'rgba(232,93,93,0.12)' : 'rgba(232,146,124,0.12)';
+
+  // Y-axis ticks
+  const yTicks = [0, maxY * 0.5, maxY];
+  const yTickH = yTicks.map(v =>
+    `<line x1="${PL}" y1="${yAt(v).toFixed(1)}" x2="${PL+cw}" y2="${yAt(v).toFixed(1)}" stroke="rgba(0,0,0,0.04)"/>
+     <text x="${PL-6}" y="${(yAt(v)+3).toFixed(1)}" fill="var(--dim2)" font-size="9" text-anchor="end" font-family="DM Sans">${fmt(v)}</text>`
+  ).join('');
+
+  return `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block">
+    ${yTickH}
+    <line x1="${PL}" y1="${PT+ch}" x2="${PL+cw}" y2="${PT+ch}" stroke="rgba(0,0,0,0.15)"/>
+    <line x1="${paceX1}" y1="${paceY1}" x2="${paceX2}" y2="${paceY2}" stroke="rgba(0,0,0,0.25)" stroke-dasharray="3,3" stroke-width="1.5"/>
+    <path d="${area}" fill="${areaCol}"/>
+    <path d="${path}" fill="none" stroke="${lineCol}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <line x1="${tx.toFixed(1)}" y1="${PT}" x2="${tx.toFixed(1)}" y2="${PT+ch}" stroke="var(--green)" stroke-width="1" stroke-dasharray="2,3"/>
+    <circle cx="${tx.toFixed(1)}" cy="${yAt(cum[today]).toFixed(1)}" r="3.5" fill="${lineCol}"/>
+    <text x="${tx.toFixed(1)}" y="${PT-3}" fill="var(--green)" font-size="9" text-anchor="middle" font-family="DM Sans" font-weight="600">Today</text>
+    <text x="${PL}" y="${PT+ch+15}" fill="var(--dim2)" font-size="9" font-family="DM Sans">Day 1</text>
+    <text x="${PL+cw}" y="${PT+ch+15}" fill="var(--dim2)" font-size="9" text-anchor="end" font-family="DM Sans">Day ${days}</text>
+  </svg>`;
+}
+
+// Daily spending bar chart
+function chartDaily(tab, catId) {
+  const { byDay, days } = buildSeries(tab, catId);
+  const today = Math.max(1, Math.min(dayOfCycle(new Date()), days));
+  const max = Math.max(...byDay.slice(1), 1);
+  const W = 440, H = 130, PL = 42, PR = 14, PT = 14, PB = 26;
+  const cw = W - PL - PR, ch = H - PT - PB;
+  const slot = cw / days;
+  const bw = slot * 0.72;
+  let bars = '';
+  for (let i = 1; i <= days; i++) {
+    const v = byDay[i];
+    const bh = (v / max) * ch;
+    const bx = PL + (i - 1) * slot + (slot - bw) / 2;
+    const by = PT + ch - bh;
+    const isToday = i === today;
+    const isFuture = i > today;
+    const fill = isFuture ? 'rgba(0,0,0,0.04)'
+               : isToday ? 'var(--green)'
+               : 'var(--accent)';
+    const minH = isFuture ? Math.max(bh, 2) : Math.max(bh, v > 0 ? 2 : 0);
+    const finalY = PT + ch - minH;
+    bars += `<rect x="${bx.toFixed(1)}" y="${finalY.toFixed(1)}" width="${bw.toFixed(1)}" height="${minH.toFixed(1)}" fill="${fill}" rx="1.5"/>`;
+  }
+  return `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block">
+    <line x1="${PL}" y1="${PT+ch}" x2="${PL+cw}" y2="${PT+ch}" stroke="rgba(0,0,0,0.15)"/>
+    <text x="${PL-6}" y="${PT+8}" fill="var(--dim2)" font-size="9" text-anchor="end" font-family="DM Sans">${fmt(max)}</text>
+    <text x="${PL-6}" y="${(PT+ch+3).toFixed(1)}" fill="var(--dim2)" font-size="9" text-anchor="end" font-family="DM Sans">$0</text>
+    ${bars}
+    <text x="${PL}" y="${PT+ch+15}" fill="var(--dim2)" font-size="9" font-family="DM Sans">Day 1</text>
+    <text x="${PL+cw}" y="${PT+ch+15}" fill="var(--dim2)" font-size="9" text-anchor="end" font-family="DM Sans">Day ${days}</text>
+  </svg>`;
+}
+
+// Essentials vs Discretionary summary
+function essDiscSummary(tab) {
+  let eS = 0, eB = 0, dS = 0, dB = 0;
+  ALL.forEach(c => {
+    const cls = classOf(c.id);
+    const s = getTotal(tab, c.id);
+    const b = getBgt(tab, c.id);
+    if (cls === 'e') { eS += s; eB += b; }
+    else { dS += s; dB += b; }
+  });
+  return { eS, eB, dS, dB };
+}
+
+// ═══════════ FIREBASE ═══════════
+function connectFirebase() {
+  const raw = document.getElementById('configInput').value.trim();
+  const errEl = document.getElementById('configError');
+  try {
+    let clean = raw.replace(/^(const|let|var)\s+\w+\s*=\s*/, '').replace(/;$/, '').trim();
+    const cfg = JSON.parse(clean);
+    if (!cfg.apiKey || !cfg.databaseURL) throw new Error('Missing apiKey or databaseURL');
+    firebase.initializeApp(cfg);
+    db = firebase.database();
+    localStorage.setItem('fb_config', JSON.stringify(cfg));
+    firebase.auth().signInAnonymously().then(() => loadFromFirebase()).catch(e => { errEl.textContent = 'Auth error: ' + e.message; errEl.style.display = 'block'; });
+  } catch(e) {
+    errEl.textContent = 'Invalid config: ' + e.message;
+    errEl.style.display = 'block';
+  }
+}
+
+function initFromStorage() {
+  const saved = localStorage.getItem('fb_config');
+  if (!saved) { show('configScreen'); return; }
+  try {
+    const cfg = JSON.parse(saved);
+    firebase.initializeApp(cfg);
+    db = firebase.database();
+    firebase.auth().signInAnonymously().then(() => loadFromFirebase()).catch(e => {
+      show('configScreen');
+      const errEl = document.getElementById('configError');
+      errEl.textContent = 'Auth failed: ' + (e.code || '') + ' — ' + e.message;
+      errEl.style.display = 'block';
+      // Keep config so user can retry without re-pasting
+      document.getElementById('configInput').value = saved;
+    });
+  } catch(e) {
+    localStorage.removeItem('fb_config');
+    show('configScreen');
+    const errEl = document.getElementById('configError');
+    errEl.textContent = 'Stored config invalid: ' + e.message;
+    errEl.style.display = 'block';
+  }
+}
+
+function loadFromFirebase() {
+  // Load config
+  db.ref('config').on('value', snap => {
+    config = snap.val();
+    if (!config) { show('setupScreen'); return; }
+    currentUser = localStorage.getItem('current_user');
+    if (!currentUser || (currentUser !== config.person1 && currentUser !== config.person2)) {
+      showPicker(); return;
+    }
+    loadBudgets();
+  });
+}
+
+function loadBudgets() {
+  db.ref('budgets').on('value', snap => {
+    budgets = snap.val();
+    if (!budgets) { showOnboard(); return; }
+    db.ref('classifications').on('value', cs => {
+      classifications = cs.val() || {};
+      loadExpenses();
+    });
+  });
+}
+
+function loadExpenses() {
+  const ck = getCK();
+  // Remove old listener
+  if (listeners.length) listeners.forEach(l => db.ref(l).off());
+  listeners = [`expenses/${ck}`];
+  db.ref(`expenses/${ck}`).on('value', snap => {
+    const data = snap.val();
+    expenses = data ? Object.values(data) : [];
+    if (currentView) renderCurrentView();
+    else showScreen('dash');
+  });
+}
+
+// ═══════════ SCREEN MANAGEMENT ═══════════
+function show(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.getElementById('mainNav').style.display = 'none';
+}
+
+function showScreen(v) {
+  currentView = v;
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  const map = { dash:'dashScreen', add:'addScreen', hist:'histScreen', budget:'budgetScreen' };
+  document.getElementById(map[v]).classList.add('active');
+  document.getElementById('mainNav').style.display = 'flex';
+  document.querySelectorAll('.nav-btn').forEach((b,i) => {
+    b.classList.toggle('on', ['dash','add','hist','budget'][i] === v);
+  });
+  renderCurrentView();
+}
+
+function renderCurrentView() {
+  if (currentView === 'dash') renderDash();
+  else if (currentView === 'add') renderAdd();
+  else if (currentView === 'hist') renderHist();
+  else if (currentView === 'budget') renderBudget();
+}
+
+// ═══════════ SETUP ═══════════
+function setupStep1() {
+  const n1 = document.getElementById('name1').value.trim();
+  const n2 = document.getElementById('name2').value.trim();
+  if (!n1 || !n2) return;
+  document.getElementById('setupStep0').style.display = 'none';
+  document.getElementById('setupStep1').style.display = 'block';
+  const p1 = document.getElementById('pickP1'); p1.textContent = "I'm " + n1;
+  p1.onclick = () => finishSetup(n1, n2, n1);
+  const p2 = document.getElementById('pickP2'); p2.textContent = "I'm " + n2;
+  p2.onclick = () => finishSetup(n1, n2, n2);
+}
+
+function finishSetup(n1, n2, me) {
+  const day = Math.max(1, Math.min(28, parseInt(document.getElementById('cycleDay').value) || 1));
+  const cfg = { person1: n1, person2: n2, cycleStart: day };
+  db.ref('config').set(cfg);
+  localStorage.setItem('current_user', me);
+  currentUser = me;
+  config = cfg;
+  showOnboard();
+}
+
+// ═══════════ PICKER ═══════════
+function showPicker() {
+  show('pickerScreen');
+  const u1 = document.getElementById('pickU1'); u1.textContent = config.person1;
+  u1.onclick = () => { localStorage.setItem('current_user', config.person1); currentUser = config.person1; dashTab='shared'; budgetTab='shared'; histFilter='all'; dashDrillCat=null; loadBudgets(); };
+  const u2 = document.getElementById('pickU2'); u2.textContent = config.person2;
+  u2.onclick = () => { localStorage.setItem('current_user', config.person2); currentUser = config.person2; dashTab='shared'; budgetTab='shared'; histFilter='all'; dashDrillCat=null; loadBudgets(); };
+}
+function switchUser() { currentUser = null; localStorage.removeItem('current_user'); showPicker(); }
+
+// ═══════════ ONBOARDING ═══════════
+let onboardBudgets = { shared:{}, person1:{}, person2:{} };
+
+function showOnboard() {
+  onboardBudgets = budgets ? JSON.parse(JSON.stringify(budgets)) : { shared:{}, person1:{}, person2:{} };
+  onboardTab = 'shared';
+  show('onboardScreen');
+  renderOnboard();
+}
+
+function renderOnboard() {
+  const visible = getVisibleTypes();
+  if (!visible.includes(onboardTab)) onboardTab = 'shared';
+  const tab = onboardTab;
+  // Chips
+  document.getElementById('onboardChips').innerHTML = visible.map(t =>
+    `<button class="chip ${t===tab?'on':''}" onclick="onboardTab='${t}';renderOnboard()">${t==='shared'?'👫 Shared':btLabel(t)}</button>`
+  ).join('');
+  // Totals
+  const tabT = ALL.reduce((s,c) => s + (onboardBudgets[tab]?.[c.id]||0), 0);
+  const allT = visible.reduce((s,t) => s + ALL.reduce((ss,c) => ss + (onboardBudgets[t]?.[c.id]||0), 0), 0);
+  document.getElementById('onboardTabTotal').textContent = btLabel(tab) + ' total: ' + fmt(tabT);
+  document.getElementById('onboardAllTotal').textContent = 'Visible total: ' + fmt(allT);
+  // Groups
+  let html = '';
+  GROUPS.forEach(g => {
+    const gt = g.cats.reduce((s,c) => s + (onboardBudgets[tab]?.[c.id]||0), 0);
+    html += `<button class="bgroup-hdr" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'">
+      <span class="g-name">${g.group}</span><span class="g-total" style="color:${gt>0?'var(--green)':'var(--dim2)'}">${fmt(gt)} ▾</span></button>`;
+    html += '<div>';
+    g.cats.forEach(c => {
+      const v = onboardBudgets[tab]?.[c.id] || '';
+      html += `<div class="brow"><div style="display:flex;align-items:center;gap:7px"><span class="brow-icon">${c.icon}</span><span class="brow-label">${c.label}</span></div>
+        <input class="inp inp-sm" type="number" inputmode="numeric" placeholder="0" value="${v||''}" onchange="onboardBudgets['${tab}']=onboardBudgets['${tab}']||{};onboardBudgets['${tab}']['${c.id}']=parseFloat(this.value)||0;renderOnboard()"></div>`;
+    });
+    html += '</div>';
+  });
+  document.getElementById('onboardGroups').innerHTML = html;
+}
+
+function finishOnboard() {
+  db.ref('budgets').set(onboardBudgets);
+  budgets = onboardBudgets;
+  showScreen('dash');
+}
+
+// ═══════════ DASHBOARD ═══════════
+function renderDash() {
+  const visible = getVisibleTypes();
+  if (!visible.includes(dashTab)) dashTab = 'shared';
+  const tab = dashTab;
+  const {start,end} = getCycleDates();
+  document.getElementById('dashCycle').textContent = fmtD(start) + ' – ' + fmtD(end);
+  document.getElementById('dashGreeting').textContent = 'Hi, ' + currentUser;
+  document.getElementById('dashDaysLeft').textContent = daysLeft() + 'd left';
+
+  // Alerts (visible types only)
+  const alerts = [];
+  visible.forEach(t => {
+    ALL.forEach(c => {
+      const b = getBgt(t,c.id); if(b<=0) return;
+      const s = getTotal(t,c.id), p = Math.round(s/b*100);
+      if (p>=90) alerts.push({icon:c.icon,label:c.label,type:btLabel(t),pct:p,rem:b-s,over:p>100});
+    });
+  });
+  alerts.sort((a,b) => b.pct - a.pct);
+  let alertH = '';
+  if (alerts.length) {
+    alertH = '<div class="alert-banner"><div class="alert-title">⚠️ Budget Warnings</div>';
+    alerts.slice(0,5).forEach(a => {
+      alertH += `<div class="alert-row ${a.over?'over':''}">${a.icon} <strong>${a.label}</strong> <span style="opacity:0.7">(${a.type})</span> — ${a.pct}% ${a.over?'· '+fmt(Math.abs(a.rem))+' over':'· '+fmt(a.rem)+' left'}</div>`;
+    });
+    if(alerts.length>5) alertH += `<div style="font-size:11px;color:var(--dim);margin-top:4px">+${alerts.length-5} more</div>`;
+    alertH += '</div>';
+  }
+  document.getElementById('dashAlerts').innerHTML = alertH;
+
+  // Chips (visible types only)
+  document.getElementById('dashChips').innerHTML = visible.map(t =>
+    `<button class="chip ${t===tab?'on':''}" onclick="dashTab='${t}';dashDrillCat=null;renderDash()">${t==='shared'?'👫 Shared':btLabel(t)}</button>`
+  ).join('');
+
+  // Hero
+  const spent = ALL.reduce((s,c)=>s+getTotal(tab,c.id),0);
+  const budget = getTotalBgt(tab);
+  const pct = budget>0?(spent/budget*100):0;
+  const col = pct>100?'var(--danger)':pct>=90?'var(--warn)':'var(--green)';
+  document.getElementById('dashHero').innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:flex-start">
+      <div><div class="sub" style="margin-bottom:4px">${btLabel(tab)} Spent</div><div style="font-size:28px;font-weight:700;color:var(--text2);letter-spacing:-1px">${fmt(spent)}</div></div>
+      <div style="text-align:right"><div style="font-size:14px;font-weight:700;color:${col}">${Math.round(pct)}%</div><div style="font-size:12px;color:var(--dim2)">of ${fmt(budget)}</div></div>
+    </div>
+    <div class="pbar"><div class="pbar-fill" style="width:${Math.min(pct,100)}%;background:${col}"></div></div>
+    ${budget>0?`<div style="font-size:12px;color:var(--dim2);margin-top:6px">${pct>100?fmt(spent-budget)+' over budget':fmt(budget-spent)+' remaining'}</div>`:''}`;
+
+  // Essentials vs Discretionary summary
+  const sum = essDiscSummary(tab);
+  const ePct = sum.eB > 0 ? Math.round(sum.eS/sum.eB*100) : 0;
+  const dPct = sum.dB > 0 ? Math.round(sum.dS/sum.dB*100) : 0;
+  const eCol = ePct>100?'var(--danger)':ePct>=90?'var(--warn)':'var(--green)';
+  const dCol = dPct>100?'var(--danger)':dPct>=90?'var(--warn)':'var(--green)';
+  document.getElementById('dashSummary').innerHTML = `
+    <div class="summary-card">
+      <div class="summary-cell">
+        <div class="s-lbl">🏠 Essentials</div>
+        <div class="s-amt">${fmt(sum.eS)}</div>
+        <div class="s-of">of ${fmt(sum.eB)}</div>
+        <div class="s-pct" style="color:${eCol}">${ePct}%</div>
+      </div>
+      <div class="summary-cell">
+        <div class="s-lbl">✨ Discretionary</div>
+        <div class="s-amt">${fmt(sum.dS)}</div>
+        <div class="s-of">of ${fmt(sum.dB)}</div>
+        <div class="s-pct" style="color:${dCol}">${dPct}%</div>
+      </div>
+    </div>`;
+
+  // Drill-down banner
+  if (dashDrillCat) {
+    const c = CATMAP[dashDrillCat];
+    document.getElementById('dashDrill').innerHTML = `
+      <div class="drill-banner">
+        <span>${c?.icon||'📦'} Showing ${c?.label||'category'} only</span>
+        <button onclick="dashDrillCat=null;renderDash()">Show all ✕</button>
+      </div>`;
+  } else {
+    document.getElementById('dashDrill').innerHTML = '';
+  }
+
+  // Charts
+  const chartLabel = dashDrillCat ? CATMAP[dashDrillCat]?.label : 'All categories';
+  const chartBudget = dashDrillCat ? getBgt(tab, dashDrillCat) : budget;
+  document.getElementById('dashChartCum').innerHTML = `
+    <div class="chart-card">
+      <div class="c-title"><span>📈 Spend vs Pace</span><span style="text-transform:none;letter-spacing:0;color:var(--dim2);font-weight:500">${chartLabel}</span></div>
+      ${chartCumulative(tab, dashDrillCat)}
+      <div class="c-legend">
+        <span><i style="background:var(--accent)"></i>Actual</span>
+        <span><i style="background:rgba(0,0,0,0.25);border-top:1px dashed var(--dim)"></i>Ideal pace</span>
+        <span><i style="background:var(--green)"></i>Today</span>
+        <span style="margin-left:auto">Budget: ${fmt(chartBudget)}</span>
+      </div>
+    </div>`;
+  document.getElementById('dashChartDaily').innerHTML = `
+    <div class="chart-card">
+      <div class="c-title"><span>📊 Daily Spend</span><span style="text-transform:none;letter-spacing:0;color:var(--dim2);font-weight:500">${chartLabel}</span></div>
+      ${chartDaily(tab, dashDrillCat)}
+    </div>`;
+
+  // Category rows
+  document.getElementById('dashCatsLabel').textContent = dashDrillCat ? 'Categories (tap to drill down)' : 'Categories — tap to drill down';
+  const active = ALL.filter(c => getBgt(tab,c.id)>0 || getTotal(tab,c.id)>0);
+  if (!active.length) {
+    document.getElementById('dashCats').innerHTML = `<div style="text-align:center;padding:30px 20px;color:var(--dim2)"><div style="font-size:14px">No budgets set for ${btLabel(tab)}</div><button class="btn" style="width:auto;padding:10px 20px;font-size:13px;margin-top:12px" onclick="budgetTab='${tab}';showScreen('budget')">Set Budgets</button></div>`;
+    return;
+  }
+  let catH = '';
+  active.forEach(c => {
+    const s=getTotal(tab,c.id),b=getBgt(tab,c.id),p=b>0?s/b*100:0,w=p>=90;
+    const cl = p>100?'var(--danger)':w?'var(--warn)':'var(--green)';
+    const isDrilled = dashDrillCat === c.id;
+    const cls = classOf(c.id);
+    const clsBadge = cls==='e'
+      ? '<span style="font-size:9px;font-weight:700;color:var(--green);background:rgba(124,181,160,0.12);padding:1px 5px;border-radius:4px;margin-left:5px;letter-spacing:0.3px">ESS</span>'
+      : '<span style="font-size:9px;font-weight:700;color:var(--warn);background:rgba(212,165,116,0.12);padding:1px 5px;border-radius:4px;margin-left:5px;letter-spacing:0.3px">DISC</span>';
+    catH += `<div class="card cat-row" style="padding:11px 14px;margin-top:3px;margin-bottom:3px;${isDrilled?'border:1px solid rgba(232,146,124,0.4)':''}" onclick="dashDrillCat=(dashDrillCat==='${c.id}'?null:'${c.id}');renderDash()">
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <div style="display:flex;align-items:center;gap:9px;min-width:0"><span style="font-size:18px">${c.icon}</span><div style="min-width:0"><div style="font-size:13px;font-weight:600;color:var(--text);display:flex;align-items:center">${c.label}${clsBadge}</div><div style="font-size:11px;color:var(--dim2)">${fmt(s)} / ${fmt(b)}</div></div></div>
+        <div style="display:flex;align-items:center;gap:5px;flex-shrink:0">${w?`<span style="font-size:12px">${p>100?'🔴':'🟡'}</span>`:''}<span style="font-size:12px;font-weight:700;color:${cl}">${Math.round(p)}%</span></div>
+      </div>
+      <div class="pbar"><div class="pbar-fill" style="width:${Math.min(p,100)}%;background:${p>100?'var(--danger)':w?'var(--warn)':c.color}"></div></div>
+    </div>`;
+  });
+  document.getElementById('dashCats').innerHTML = catH;
+}
+
+// ═══════════ ADD EXPENSE ═══════════
+function renderAdd() {
+  const myType = currentUser === config.person1 ? 'person1' : 'person2';
+  document.getElementById('addUser').textContent = 'Logged by ' + currentUser;
+
+  // Charge toggle
+  const types = [{id:'shared',label:'Shared',icon:'👫'},{id:myType,label:'My personal',icon:'👤'}];
+  document.getElementById('addChargeRow').innerHTML = types.map(t =>
+    `<button class="charge-btn ${addState.budgetType===t.id?'on':''}" onclick="addState.budgetType='${t.id}';renderAdd()">${t.icon} ${t.label}</button>`
+  ).join('');
+
+  // Amount warning
+  const amt = parseFloat(document.getElementById('addAmount').value) || 0;
+  const b = getBgt(addState.budgetType, addState.category);
+  const s = getTotal(addState.budgetType, addState.category);
+  const after = s + amt;
+  const p = b > 0 ? (after/b*100) : 0;
+  if (amt && b > 0 && p >= 90) {
+    const cls = p > 100 ? 'red' : 'yellow';
+    document.getElementById('addWarn').innerHTML = `<div class="inline-warn ${cls}">${p>100?'⛔ Over budget! '+Math.round(p)+'% of '+fmt(b):'⚠️ This takes you to '+Math.round(p)+'% of '+fmt(b)}</div>`;
+  } else {
+    document.getElementById('addWarn').innerHTML = '';
+  }
+
+  // Categories
+  const search = document.getElementById('addCatSearch').value.toLowerCase();
+  const groups = search ? [{group:'Results',cats:ALL.filter(c=>c.label.toLowerCase().includes(search))}] : GROUPS;
+  let html = '';
+  groups.forEach(g => {
+    if (!g.cats.length) return;
+    html += `<div style="font-size:10px;color:var(--dim2);font-weight:700;letter-spacing:1px;padding:6px 0 4px;text-transform:uppercase">${g.group}</div>`;
+    html += '<div class="cat-grid">';
+    g.cats.forEach(c => {
+      const on = addState.category === c.id;
+      html += `<button class="cat-btn ${on?'on':''}" style="${on?`background:${c.color}22;border-color:${c.color}`:''}" onclick="addState.category='${c.id}';renderAdd()"><span style="font-size:13px">${c.icon}</span>${c.label}</button>`;
+    });
+    html += '</div>';
+  });
+  document.getElementById('addCatList').innerHTML = html;
+
+  document.getElementById('addSubmit').disabled = !amt;
+  document.getElementById('addSubmit').style.opacity = amt ? 1 : 0.4;
+}
+
+function addExpense() {
+  const amt = parseFloat(document.getElementById('addAmount').value);
+  if (!amt || isNaN(amt)) return;
+  const exp = {
+    id: Date.now().toString(),
+    amount: amt,
+    category: addState.category,
+    budgetType: addState.budgetType,
+    note: document.getElementById('addNote').value,
+    user: currentUser,
+    date: new Date().toISOString(),
+  };
+  const ck = getCK();
+  db.ref(`expenses/${ck}/${exp.id}`).set(exp);
+  document.getElementById('addAmount').value = '';
+  document.getElementById('addNote').value = '';
+  showScreen('dash');
+}
+
+// ═══════════ HISTORY ═══════════
+function renderHist() {
+  const visible = getVisibleTypes();
+  if (histFilter !== 'all' && !visible.includes(histFilter)) histFilter = 'all';
+  const chipTypes = ['all', ...visible];
+  document.getElementById('histChips').innerHTML = chipTypes.map(t =>
+    `<button class="chip ${histFilter===t?'on':''}" onclick="histFilter='${t}';renderHist()">${t==='all'?'All':t==='shared'?'Shared':btLabel(t)}</button>`
+  ).join('');
+
+  const filtered = expenses
+    .filter(e => visible.includes(e.budgetType)) // privacy
+    .filter(e => histFilter==='all' || e.budgetType===histFilter)
+    .sort((a,b)=>new Date(b.date)-new Date(a.date));
+  if (!filtered.length) {
+    document.getElementById('histList').innerHTML = '<div style="text-align:center;padding:40px;color:var(--dim2)"><div style="font-size:32px;margin-bottom:8px">📭</div>No expenses yet</div>';
+    return;
+  }
+  let html = '';
+  filtered.forEach(e => {
+    const c = CATMAP[e.category]; const d = new Date(e.date);
+    html += `<div class="card hist-row" style="margin-top:3px;margin-bottom:3px">
+      <div class="hist-info"><span style="font-size:18px">${c?.icon||'📦'}</span><div style="min-width:0"><div class="hist-name">${c?.label||'Other'}${e.note?' · '+e.note:''}</div><div class="hist-meta">${e.user} · ${btLabel(e.budgetType)} · ${MONTHS[d.getMonth()]} ${d.getDate()}</div></div></div>
+      <div style="display:flex;align-items:center;flex-shrink:0"><span class="hist-amt">${fmt(e.amount)}</span><button class="del-btn" onclick="delExpense('${e.id}')">×</button></div>
+    </div>`;
+  });
+  document.getElementById('histList').innerHTML = html;
+}
+
+function delExpense(id) { db.ref(`expenses/${getCK()}/${id}`).remove(); }
+
+// ═══════════ BUDGETS ═══════════
+function renderBudget() {
+  const visible = getVisibleTypes();
+  if (!visible.includes(budgetTab)) budgetTab = 'shared';
+  const tab = budgetTab;
+  const src = editMode ? editBudgets : budgets;
+
+  // Actions
+  if (!editMode) {
+    document.getElementById('budgetActions').innerHTML = `<button class="btn-sm btn-edit" onclick="startEdit()">Edit</button>`;
+  } else {
+    document.getElementById('budgetActions').innerHTML = `<div style="display:flex;gap:8px"><button class="btn-sm" style="background:var(--glass);border:1px solid var(--border2);color:var(--dim);cursor:pointer;font-family:inherit" onclick="cancelEdit()">Cancel</button><button class="btn btn-sm" onclick="saveEdit()">Save</button></div>`;
+  }
+
+  // Chips (visible only)
+  document.getElementById('budgetChips').innerHTML = visible.map(t =>
+    `<button class="chip ${t===tab?'on':''}" onclick="budgetTab='${t}';renderBudget()">${t==='shared'?'👫 Shared':btLabel(t)}</button>`
+  ).join('');
+
+  const total = ALL.reduce((s,c) => s + (src?.[tab]?.[c.id]||0), 0);
+  document.getElementById('budgetTabTotal').textContent = btLabel(tab) + ' total: ' + fmt(total);
+
+  let html = '';
+  GROUPS.forEach(g => {
+    const gt = g.cats.reduce((s,c) => s + (src?.[tab]?.[c.id]||0), 0);
+    if (!editMode && gt === 0) return;
+    html += `<button class="bgroup-hdr" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'">
+      <span class="g-name">${g.group}</span><span class="g-total" style="color:${gt>0?'var(--green)':'var(--dim2)'}">${fmt(gt)} ▾</span></button>`;
+    html += '<div>';
+    g.cats.forEach(c => {
+      const v = src?.[tab]?.[c.id] || 0;
+      if (!editMode && v === 0) return;
+      const cls = editMode ? classOfEdit(c.id) : classOf(c.id);
+      const clsLabel = cls === 'e' ? 'ESS' : 'DISC';
+      const clsClass = cls === 'e' ? 'essential' : 'discretionary';
+      if (editMode) {
+        html += `<div class="brow"><div style="display:flex;align-items:center;gap:7px;flex:1;min-width:0"><span class="brow-icon">${c.icon}</span><span class="brow-label" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.label}</span></div>
+          <button class="cls-pill ${clsClass}" onclick="toggleClass('${c.id}')">${clsLabel}</button>
+          <input class="inp inp-sm" type="number" inputmode="numeric" placeholder="0" value="${v||''}" onchange="editBudgets['${tab}']=editBudgets['${tab}']||{};editBudgets['${tab}']['${c.id}']=parseFloat(this.value)||0"></div>`;
+      } else {
+        html += `<div class="brow"><div style="display:flex;align-items:center;gap:7px;flex:1;min-width:0"><span class="brow-icon">${c.icon}</span><span class="brow-label" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.label}</span></div>
+          <span class="cls-pill ${clsClass}" style="cursor:default">${clsLabel}</span>
+          <span style="font-size:13px;font-weight:700;color:var(--text)">${fmt(v)}</span></div>`;
+      }
+    });
+    html += '</div>';
+  });
+  document.getElementById('budgetGroups').innerHTML = html;
+
+  document.getElementById('cycleLabel').textContent = 'Day ' + config.cycleStart;
+  document.getElementById('cycleInput').value = config.cycleStart;
+  document.getElementById('cycleInput').onchange = function() {
+    const v = Math.max(1, Math.min(28, parseInt(this.value) || 1));
+    config.cycleStart = v;
+    db.ref('config/cycleStart').set(v);
+  };
+}
+
+function toggleClass(cid) {
+  if (!editMode) return;
+  editClassifications = editClassifications || {};
+  const cur = classOfEdit(cid);
+  editClassifications[cid] = cur === 'e' ? 'd' : 'e';
+  renderBudget();
+}
+
+function startEdit() {
+  editMode = true;
+  editBudgets = JSON.parse(JSON.stringify(budgets || {shared:{},person1:{},person2:{}}));
+  // Seed editClassifications with current effective values so toggles persist
+  editClassifications = {};
+  ALL.forEach(c => { editClassifications[c.id] = classOf(c.id); });
+  renderBudget();
+}
+function cancelEdit() { editMode = false; editBudgets = null; editClassifications = null; renderBudget(); }
+function saveEdit() {
+  db.ref('budgets').set(editBudgets);
+  if (editClassifications) db.ref('classifications').set(editClassifications);
+  editMode = false; editBudgets = null; editClassifications = null;
+}
+
+function resetAll() {
+  if (!confirm('Reset ALL data? This cannot be undone.')) return;
+  db.ref('/').set(null);
+  localStorage.removeItem('current_user');
+  config = null; budgets = null; expenses = []; currentUser = null;
+  show('setupScreen');
+}
+
+// ═══════════ EVENT LISTENERS ═══════════
+document.getElementById('addAmount').addEventListener('input', () => { if(currentView==='add') renderAdd(); });
+document.getElementById('addCatSearch').addEventListener('input', () => { if(currentView==='add') renderAdd(); });
+
+// ═══════════ INIT ═══════════
+initFromStorage();
+</script>
+</body>
+</html>
